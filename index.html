@@ -643,7 +643,7 @@
       const query = encodeURIComponent("-site:youtube.com -site:genius.com/albums " + queryText + " \"lyrics\"");
 	  // The ! parameter causes DuckDuckGo to redirect to the first result
       const url = "https://duckduckgo.com/lite/?q=!+" + query;
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     });
     
   </script>
