@@ -79,10 +79,11 @@
   </style>
 </head>
 <body>
-  <h1>
+  <h1 style="margin-block-end: 2px;">
     Chaotic MP3 Player 
     <button id="downloadPlayerBtn" style="margin-left:20px;">Download Player</button>
   </h1>
+    <div id="subtitle">A better MP3 player. Load a folder filled with MP3s.</div>
  
     <!-- Display the current song -->
   <div><p id="currentSong" style="display: inline-block"></p>
@@ -160,6 +161,7 @@
     const playlistUl = document.getElementById('playlist');
     const audioPlayer = document.getElementById('audioPlayer');
     const timeDisplay = document.getElementById('timeDisplay');
+	const subtitle = document.getElementById('subtitle');
     // Drop-down for auto-play mode.
     const autoPlayMode = document.getElementById('autoPlayMode');
 	
@@ -221,6 +223,7 @@
         extraControls.style.display = 'flex';
         youtubeBtn.style.display = 'inline-block';
 		lyricsBtn.style.display = 'inline-block';
+		subtitle.style.display = 'none';
         
         // Initially sort and render the playlist.
         sortPlaylist();
