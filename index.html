@@ -359,16 +359,32 @@
       return `${track.name} <span class="metadata">(Duration: ${durationStr}, Size: ${sizeStr}, Modified: ${modStr}, Rating: ${ratingStr})</span>`;
     }
     
-    // Load and play the song at the given index.
-    function loadSong(index) {
-      if (playlist.length === 0) return;
-      const track = playlist[index];
-      audioPlayer.src = URL.createObjectURL(track.file);
-      currentSongEl.textContent = "Now playing: " + track.name;
-      audioPlayer.load();
-      audioPlayer.play();
-      renderPlaylist();
-    }
+	function loadSong(index) {
+	  if (playlist.length === 0) return;
+	  const track = playlist[index];
+	  // Create an object URL for the selected file
+	  audioPlayer.src = URL.createObjectURL(track.file);
+	  currentSongEl.textContent = "Now playing: " + track.name;
+	  audioPlayer.load();
+	  audioPlayer.play();
+	  renderPlaylist();
+
+	// Mobile phone support
+	  // Update Media Session metadata if supported
+	  if ('mediaSession' in navigator) {
+		navigator.mediaSession.metadata = new MediaMetadata({
+		  title: track.name,
+		  artist: 'Chaotic MP3 Player',
+		  album: '', // You can update this if you have album info.
+		  // Optionally, add artwork. Replace these URLs with your own images.
+		  artwork: [
+			{ src: 'https://via.placeholder.com/96',   sizes: '96x96',   type: 'image/png' },
+			{ src: 'https://via.placeholder.com/128',  sizes: '128x128', type: 'image/png' }
+		  ]
+		});
+	  }
+	}
+
     
     // Playback controls that respect the filtered (and sorted) playlist.
     prevBtn.addEventListener('click', () => {
@@ -645,7 +661,52 @@
       const url = "https://duckduckgo.com/lite/?q=!+" + query;
       window.open(url, '_blank', 'noopener,noreferrer');
     });
-    
+	
+	// Mobile phone support
+		if ('mediaSession' in navigator) {
+	  // Set up action handlers for media controls
+	  navigator.mediaSession.setActionHandler('play', () => {
+		audioPlayer.play();
+	  });
+	  
+	  navigator.mediaSession.setActionHandler('pause', () => {
+		audioPlayer.pause();
+	  });
+	  
+	  navigator.mediaSession.setActionHandler('previoustrack', () => {
+		// Reuse your existing previous button logic.
+		prevBtn.click();
+	  });
+	  
+	  navigator.mediaSession.setActionHandler('nexttrack', () => {
+		// Reuse your existing next button logic.
+		nextBtn.click();
+	  });
+	  
+	  // Optional: Enable seek backward and forward
+	  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+		const skipTime = details.seekOffset || 10; // Default 10 seconds.
+		audioPlayer.currentTime = Math.max(audioPlayer.currentTime - skipTime, 0);
+	  });
+	  
+	  navigator.mediaSession.setActionHandler('seekforward', (details) => {
+		const skipTime = details.seekOffset || 10;
+		audioPlayer.currentTime = Math.min(audioPlayer.currentTime + skipTime, audioPlayer.duration);
+	  });
+	  
+	  // Update the position state (if supported) so the OS can show current time / duration.
+	  audioPlayer.addEventListener('timeupdate', () => {
+		if (navigator.mediaSession.setPositionState) {
+		  navigator.mediaSession.setPositionState({
+			duration: audioPlayer.duration || 0,
+			playbackRate: audioPlayer.playbackRate || 1,
+			position: audioPlayer.currentTime || 0
+		  });
+		}
+	  });
+	}
+	// Mobile phone support
+		
   </script>
 </body>
 </html>
