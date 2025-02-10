@@ -164,18 +164,40 @@
     const autoPlayMode = document.getElementById('autoPlayMode');
 	
 	// Download Player button functionality
-    const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
-    downloadPlayerBtn.addEventListener('click', () => {
-      const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-Music-Player/refs/heads/main/index.html';
-      const a = document.createElement('a');
-      a.href = url;
-      // Set a default file name for the download.
-      a.download = 'ChaoticMusicPlayer.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
-    
+	  const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
+
+	  // Hide the button when the page is opened locally
+	  if (window.location.protocol === 'file:') {
+		downloadPlayerBtn.style.display = 'none';
+	  } else {
+		downloadPlayerBtn.addEventListener('click', async () => {
+		  // URL to download the player from
+		  const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-Music-Player/refs/heads/main/index.html';
+		  try {
+			const response = await fetch(url);
+			if (!response.ok) {
+			  throw new Error('Network response was not ok');
+			}
+			const content = await response.text();
+			// Create a Blob with the fetched content
+			const blob = new Blob([content], { type: 'text/html' });
+			// Create a blob URL for the download
+			const blobUrl = URL.createObjectURL(blob);
+			// Create an invisible download link and trigger a click on it
+			const a = document.createElement('a');
+			a.href = blobUrl;
+			a.download = 'ChaoticMusicPlayer.html';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			// Clean up the blob URL
+			URL.revokeObjectURL(blobUrl);
+		  } catch (error) {
+			alert('Download failed: ' + error.message);
+		  }
+		});
+	  }
+		
     // When a folder is selected…
     folderInput.addEventListener('change', (event) => {
       const files = Array.from(event.target.files);
