@@ -1,14 +1,611 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-    <title>Electron Hello World</title>
-  </head>
-  <body>
+<head>
+  <meta charset="UTF-8">
+  <title>Chaotic Music Player</title>
+  <style>
+    /* Dark mode styling */
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    input, select, button {
+      background-color: #1e1e1e;
+      color: #f5f5f5;
+      border: 1px solid #333;
+      padding: 5px;
+    }
+    #playlist {
+      margin-top: 20px;
+      list-style: none;
+      padding: 0;
+      max-height: 450px;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+    #playlist li {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #333;
+    }
+    #playlist li:hover {
+      background-color: #333;
+    }
+    #playlist li.active {
+      background-color: #555;
+      font-weight: bold;
+    }
+    .song-info {
+      display: inline-block;
+      width: 100%;
+    }
+    .metadata {
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    /* Styling for extra controls */
+    #extraControls {
+      margin-top: 10px;
+	  margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    #scrubber {
+      width: 300px;
+    }
+    #volumeSlider {
+      width: 100px;
+    }
+    #searchBar {
+      width: 200px;
+      padding: 5px;
+    }
+    /* Time/volume display style */
+    #timeDisplay, #volumeDisplay {
+      font-size: 0.9em;
+      color: #ccc;
+      min-width: 70px;
+      text-align: center;
+      margin-left: -10px;
+    }
+	/* Volume display style */
+    #volumeDisplay {
+      min-width: 40px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chaotic Music Player</h1>
+ 
+    <!-- Display the current song -->
+  <div><p id="currentSong" style="display: inline-block"></p>
+    <!-- Button to check current song on YouTube -->
+	<button id="explorerBtn" style="display: none; margin-left: 20px;">Find in Explorer</button>
+    <button id="youtubeBtn" style="display: none; margin-left: 10px;">Find on YouTube</button>
+    <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find Lyrics</button>
+  
+  <!-- Extra controls: search bar, scrubber, time display, volume slider, volume percentage, and auto-play mode -->
+  <div id="extraControls" style="display: none;">
+      <button id="prevBtn">⏮︎︎</button>
+    <!-- Single toggle button for play/pause -->
+    <button id="togglePlay" style="min-width: 25px;">▶︎</button>
+    <button id="nextBtn">⏭︎</button>
+    <input type="range" id="scrubber" min="0" max="0" step="0.1" value="0">
+	<span id="timeDisplay">0:00/0:00</span>
+    <label for="volumeSlider" style="margin-right: -10px;">🔊︎</label>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+    <span id="volumeDisplay">100%</span>
+    <!-- Drop-down for auto-play mode -->
+    <select id="autoPlayMode">
+      <option value="none">No auto-play</option>
+      <option value="next" selected>Auto-play next song</option>
+      <option value="repeat">Auto-repeat this song</option>
+    </select>
+  </div>
 
-    <h1>Hello World!</h1>
-      <h2>Version: <strong id="app-version">unset</strong></h2>
+ 
+     <!-- Folder selection (Chrome/Edge only) -->
+  <input type="file" style="margin-right: 20px;" id="folderInput" webkitdirectory multiple accept="audio/mp3">
+   <!-- Sorting options (appear once files are loaded) -->
+  <div id="sorting" style="margin-top: 10px; display: none;">
+    <input type="text" id="searchBar" style="margin-right: 20px;" placeholder="Search...">
+    <select id="sortSelect" style="margin-right: 5px;" >
+      <!-- Default sort is Modified Date -->
+      <option value="modified" selected>Sort by modified Date</option>
+      <option value="name">Sort by name</option>
+      <option value="size">Sort by size</option>
+      <option value="duration">Sort by duration</option>
+      <option value="rating">Sort by rating</option>
+      <option value="shuffle">Sort randomly</option>
+    </select>
+    <!-- Reverse order is checked by default -->
+    <input type="checkbox" id="inverseOrder" checked>
+    <label for="inverseOrder">Reverse</label>
+  </div>
+  <!-- Playlist -->
+  <ul id="playlist"></ul>
+  
+  <!-- Hidden audio element -->
+  <audio id="audioPlayer"></audio>
+  
+  <script>
+    // Global variables
+    let playlist = []; // Array of track objects
+    let currentSongIndex = 0;
+    // Mapping from track.id to its list item element
+    let liMapping = {};
+    
+    // Get DOM elements.
+    const folderInput = document.getElementById('folderInput');
+    const sortingDiv = document.getElementById('sorting');
+    const sortSelect = document.getElementById('sortSelect');
+    const inverseOrderCheckbox = document.getElementById('inverseOrder');
+    const extraControls = document.getElementById('extraControls');
+    const searchBar = document.getElementById('searchBar');
+    const scrubber = document.getElementById('scrubber');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeDisplay = document.getElementById('volumeDisplay');
+    const prevBtn = document.getElementById('prevBtn');
+    const togglePlay = document.getElementById('togglePlay');
+    const nextBtn = document.getElementById('nextBtn');
+    const currentSongEl = document.getElementById('currentSong');
+    const youtubeBtn = document.getElementById('youtubeBtn');
+    const playlistUl = document.getElementById('playlist');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const timeDisplay = document.getElementById('timeDisplay');
+    // Drop-down for auto-play mode.
+    const autoPlayMode = document.getElementById('autoPlayMode');
+    
+    // When a folder is selected…
+    folderInput.addEventListener('change', (event) => {
+      const files = Array.from(event.target.files);
+      // Filter for MP3 files and create a track object for each.
+      // Assign each track a unique "id" based on its original order.
+      playlist = files.filter(file => file.name.toLowerCase().endsWith('.mp3'))
+                      .map((file, index) => ({
+                        id: index,
+                        file: file,
+                        // Remove ".mp3" suffix from display name:
+                        name: file.name.replace(/\.mp3$/i, ''),
+                        size: file.size,
+                        lastModified: file.lastModified,
+                        duration: null, // To be loaded asynchronously.
+                        rating: null    // To be loaded via metadata.
+                      }));
+      
+      if (playlist.length > 0) {
+        currentSongIndex = 0;
+        sortingDiv.style.display = 'inline-block';
+        extraControls.style.display = 'flex';
+        youtubeBtn.style.display = 'inline-block';
+		explorerBtn.style.display = 'inline-block';
+		lyricsBtn.style.display = 'inline-block';
+        
+        // Initially sort and render the playlist.
+        sortPlaylist();
+        renderPlaylist();
+        loadSong(currentSongIndex);
+        
+        // Load metadata concurrently with a limit (e.g., 10 at a time).
+        processConcurrently(playlist, 10, track => getDuration(track.file), (track, duration) => {
+          track.duration = duration;
+          updateListItem(track.id);
+        });
+        processConcurrently(playlist, 10, track => getRating(track.file), (track, rating) => {
+          track.rating = rating;
+          updateListItem(track.id);
+        });
+      } else {
+        alert('No MP3 files found in the selected folder.');
+      }
+    });
+    
+    // When sort options or search text change, re-render the list.
+    sortSelect.addEventListener('change', () => {
+      const currentId = playlist[currentSongIndex]?.id;
+      sortPlaylist();
+      if (typeof currentId !== 'undefined') {
+        currentSongIndex = playlist.findIndex(t => t.id === currentId);
+        if (currentSongIndex < 0) { currentSongIndex = 0; }
+      }
+      renderPlaylist();
+    });
+    inverseOrderCheckbox.addEventListener('change', () => {
+      const currentId = playlist[currentSongIndex]?.id;
+      sortPlaylist();
+      if (typeof currentId !== 'undefined') {
+        currentSongIndex = playlist.findIndex(t => t.id === currentId);
+        if (currentSongIndex < 0) { currentSongIndex = 0; }
+      }
+      renderPlaylist();
+    });
+    searchBar.addEventListener('input', () => {
+      renderPlaylist();
+    });
+    
+    // Sort the playlist array based on the selected criteria.
+    function sortPlaylist() {
+      const sortKey = sortSelect.value;
+      if (sortKey === 'shuffle') {
+        shuffleArray(playlist);
+      } else {
+        switch(sortKey) {
+          case 'name':
+            playlist.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          case 'modified':
+            playlist.sort((a, b) => a.lastModified - b.lastModified);
+            break;
+          case 'size':
+            playlist.sort((a, b) => a.size - b.size);
+            break;
+          case 'duration':
+            playlist.sort((a, b) => (a.duration || 0) - (b.duration || 0));
+            break;
+          case 'rating':
+            playlist.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+            break;
+        }
+      }
+      if (inverseOrderCheckbox.checked) {
+        playlist.reverse();
+      }
+    }
+    
+    // Fisher–Yates shuffle algorithm.
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+    
+    // Render (or re-render) the playlist.
+    function renderPlaylist() {
+      liMapping = {}; // Reset the mapping.
+      const searchTerm = searchBar.value.toLowerCase();
+      const fragment = document.createDocumentFragment();
+      
+      for (let track of playlist) {
+        if (!track.name.toLowerCase().includes(searchTerm)) continue;
+        const li = document.createElement('li');
+        li.dataset.id = track.id;
+        li.innerHTML = formatTrackText(track);
+        li.addEventListener('click', (e) => {
+          const trackId = parseInt(e.currentTarget.dataset.id, 10);
+          const idx = playlist.findIndex(t => t.id === trackId);
+          if (idx >= 0) {
+            currentSongIndex = idx;
+            loadSong(currentSongIndex);
+          }
+        });
+        if (playlist[currentSongIndex] && track.id === playlist[currentSongIndex].id) {
+          li.classList.add('active');
+        }
+        liMapping[track.id] = li;
+        fragment.appendChild(li);
+      }
+      
+      playlistUl.innerHTML = '';
+      playlistUl.appendChild(fragment);
+    }
+    
+    // Update the list item for a single track.
+    function updateListItem(trackId) {
+      const li = liMapping[trackId];
+      if (li) {
+        const track = playlist.find(t => t.id === trackId);
+        if (track) {
+          li.innerHTML = formatTrackText(track);
+          if (playlist[currentSongIndex] && track.id === playlist[currentSongIndex].id) {
+            li.classList.add('active');
+          } else {
+            li.classList.remove('active');
+          }
+        }
+      }
+    }
+    
+    // Format the track text for display.
+    function formatTrackText(track) {
+      const durationStr = track.duration ? formatDuration(track.duration) : "Loading";
+      const sizeStr = formatFileSize(track.size);
+      const modStr = formatDate(track.lastModified);
+      const ratingStr = (track.rating !== null) ? track.rating : "Loading";
+      return `${track.name} <span class="metadata">(Duration: ${durationStr}, Size: ${sizeStr}, Modified: ${modStr}, Rating: ${ratingStr})</span>`;
+    }
+    
+    // Load and play the song at the given index.
+    function loadSong(index) {
+      if (playlist.length === 0) return;
+      const track = playlist[index];
+      audioPlayer.src = URL.createObjectURL(track.file);
+      currentSongEl.textContent = "Now playing: " + track.name;
+      audioPlayer.load();
+      audioPlayer.play();
+      renderPlaylist();
+    }
+    
+    // Playback controls that respect the filtered (and sorted) playlist.
+    prevBtn.addEventListener('click', () => {
+      // Compute the visible tracks based on the search filter.
+      const searchTerm = searchBar.value.toLowerCase();
+      const visibleTracks = playlist.filter(track => track.name.toLowerCase().includes(searchTerm));
+      if (visibleTracks.length === 0) return; // Nothing to do if no tracks are visible.
+      
+      // Find the current track in the visible (filtered) list.
+      const currentTrack = playlist[currentSongIndex];
+      let visibleIndex = visibleTracks.findIndex(track => track.id === currentTrack.id);
+      
+      // If the current track isn’t in the filtered list (perhaps due to a new filter),
+      // default to the first visible track.
+      if (visibleIndex === -1) {
+        visibleIndex = 0;
+      }
+      
+      // Move to the previous track in the filtered list (with wrap-around).
+      visibleIndex = (visibleIndex - 1 + visibleTracks.length) % visibleTracks.length;
+      const prevTrack = visibleTracks[visibleIndex];
+      
+      // Find the global index for the selected track.
+      currentSongIndex = playlist.findIndex(track => track.id === prevTrack.id);
+      loadSong(currentSongIndex);
+    });
+    
+    nextBtn.addEventListener('click', () => {
+      // Compute the visible tracks based on the search filter.
+      const searchTerm = searchBar.value.toLowerCase();
+      const visibleTracks = playlist.filter(track => track.name.toLowerCase().includes(searchTerm));
+      if (visibleTracks.length === 0) return; // Nothing to do if no tracks are visible.
+      
+      // Find the current track in the visible (filtered) list.
+      const currentTrack = playlist[currentSongIndex];
+      let visibleIndex = visibleTracks.findIndex(track => track.id === currentTrack.id);
+      
+      // If the current track isn’t in the filtered list, default to the first visible track.
+      if (visibleIndex === -1) {
+        visibleIndex = 0;
+      }
+      
+      // Move to the next track in the filtered list (with wrap-around).
+      visibleIndex = (visibleIndex + 1) % visibleTracks.length;
+      const nextTrack = visibleTracks[visibleIndex];
+      
+      // Find the global index for the selected track.
+      currentSongIndex = playlist.findIndex(track => track.id === nextTrack.id);
+      loadSong(currentSongIndex);
+    });
+    
+    togglePlay.addEventListener('click', () => {
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+      } else {
+        audioPlayer.pause();
+      }
+    });
+    audioPlayer.addEventListener('play', () => {
+      togglePlay.textContent = '⏸︎';
+    });
+    audioPlayer.addEventListener('pause', () => {
+      togglePlay.textContent = '▶︎';
+    });
+    // Modified 'ended' event handler to respect the selected auto-play mode.
+    audioPlayer.addEventListener('ended', () => {
+      const mode = autoPlayMode.value;
+      if (mode === "none") {
+        // Do nothing.
+        return;
+      } else if (mode === "repeat") {
+        // Repeat the current song.
+        loadSong(currentSongIndex);
+      } else if (mode === "next") {
+        // Auto-play the next song.
+        currentSongIndex = (currentSongIndex + 1) % playlist.length;
+        loadSong(currentSongIndex);
+      }
+    });
+    
+    // Scrubber updates and current time/total duration display.
+    audioPlayer.addEventListener('timeupdate', () => {
+      if (!isNaN(audioPlayer.duration)) {
+        scrubber.max = audioPlayer.duration;
+        scrubber.value = audioPlayer.currentTime;
+        timeDisplay.textContent = `${formatDuration(audioPlayer.currentTime)}/${formatDuration(audioPlayer.duration)}`;
+      }
+    });
+    scrubber.addEventListener('input', () => {
+      audioPlayer.currentTime = scrubber.value;
+    });
+    
+    // Volume control and percentage display.
+    volumeSlider.addEventListener('input', () => {
+      audioPlayer.volume = volumeSlider.value;
+      volumeDisplay.textContent = Math.round(audioPlayer.volume * 100) + "%";
+    });
+    
+    // ----------------------------
+    // Process an array concurrently with a limit.
+    function processConcurrently(array, limit, asyncFn, updateFn) {
+      let i = 0;
+      let active = 0;
+      return new Promise(resolve => {
+        function next() {
+          if (i >= array.length && active === 0) {
+            resolve();
+            return;
+          }
+          while (active < limit && i < array.length) {
+            const item = array[i++];
+            active++;
+            asyncFn(item)
+              .then(result => {
+                updateFn(item, result);
+              })
+              .finally(() => {
+                active--;
+                next();
+              });
+          }
+        }
+        next();
+      });
+    }
+    
+    // Retrieve duration using a temporary audio element.
+    function getDuration(file) {
+      return new Promise((resolve) => {
+        const tempAudio = new Audio();
+        tempAudio.preload = 'metadata';
+        tempAudio.src = URL.createObjectURL(file);
+        tempAudio.addEventListener('loadedmetadata', () => {
+          resolve(tempAudio.duration);
+        });
+        tempAudio.addEventListener('error', () => {
+          resolve(0);
+        });
+      });
+    }
+    
+    // Retrieve rating
+	function getRating(file) {
+	  return new Promise((resolve) => {
+		const reader = new FileReader();
+		reader.onload = function(e) {
+		  const buffer = e.target.result;
+		  const view = new DataView(buffer);
 
-  </body>
+		  // Check for an ID3 header ("ID3" in the first three bytes)
+		  if (
+			view.getUint8(0) !== 0x49 || // 'I'
+			view.getUint8(1) !== 0x44 || // 'D'
+			view.getUint8(2) !== 0x33    // '3'
+		  ) {
+			resolve(0);
+			return;
+		  }
+
+		  // Read the synchsafe integer that tells us the tag size.
+		  const tagSize = ((view.getUint8(6) & 0x7F) << 21) |
+						  ((view.getUint8(7) & 0x7F) << 14) |
+						  ((view.getUint8(8) & 0x7F) << 7)  |
+						  (view.getUint8(9) & 0x7F);
+		  
+		  // The header is 10 bytes long.
+		  let pointer = 10;
+		  const end = pointer + tagSize;
+		  let rating = 0;
+
+		  while (pointer < end) {
+			// Read 4-byte frame ID.
+			let frameId = "";
+			for (let i = 0; i < 4; i++) {
+			  frameId += String.fromCharCode(view.getUint8(pointer + i));
+			}
+			pointer += 4;
+
+			// If the frame ID is empty, break out.
+			if (!frameId.trim()) break;
+
+			// Read the 4-byte frame size (big-endian; in ID3v2.3 it’s a normal integer)
+			const frameSize = view.getUint32(pointer, false);
+			pointer += 4;
+
+			// Skip the 2-byte flags.
+			pointer += 2;
+
+			if (frameId === "POPM") {
+			  // POPM frame structure:
+			  //   - A null-terminated email string.
+			  //   - A 1-byte rating.
+			  //   - A play count (variable length, not needed here).
+			  let email = "";
+			  while (pointer < end) {
+				const byte = view.getUint8(pointer);
+				pointer++;
+				if (byte === 0) break; // null terminator
+				email += String.fromCharCode(byte);
+			  }
+			  // The next byte is the rating.
+			  if (pointer < end) {
+				rating = view.getUint8(pointer);
+				// Normalize a 0–255 rating to a 0–5 scale.
+				if (rating > 5) {
+				  rating = Math.ceil(rating / 51);
+				}
+			  }
+			  resolve(rating);
+			  return;
+			} else {
+			  // Skip this frame’s content if it's not POPM.
+			  pointer += frameSize;
+			}
+		  }
+		  // If no POPM frame was found, resolve to 0.
+		  resolve(0);
+		};
+
+		reader.onerror = function() {
+		  resolve(0);
+		};
+
+		reader.readAsArrayBuffer(file);
+	  });
+	}
+
+
+    
+    // Helper: Format duration as M:SS.
+    function formatDuration(duration) {
+      const minutes = Math.floor(duration / 60);
+      const seconds = Math.floor(duration % 60);
+      return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+    }
+    
+    // Helper: Format file size.
+    function formatFileSize(bytes) {
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      if (bytes === 0) return '0 Byte';
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+    }
+    
+    // Helper: Format a timestamp as a local date/time string.
+    function formatDate(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    }
+    
+    // YouTube button: Automatically navigate to the first YouTube result.
+    // This is achieved by performing a Google search restricted to YouTube using
+    // the "I'm Feeling Lucky" feature.
+    youtubeBtn.addEventListener('click', () => {
+      if (playlist.length === 0) return;
+      const track = playlist[currentSongIndex];
+      const queryText = track.name.replace(/\.mp3$/i, '');
+      // Build a query that restricts results to YouTube.
+      const query = encodeURIComponent("site:youtube.com " + queryText);
+      // The btnI parameter causes Google to redirect to the first result.
+      const url = "https://www.google.com/search?q=" + query + "&btnI=I";
+      window.open(url, '_blank');
+    });
+	
+	// Lyrics button: Automatically navigate to the lyrics.
+    // This is achieved by performing a DuckDuckGo search
+      lyricsBtn.addEventListener('click', () => {
+      if (playlist.length === 0) return;
+      const track = playlist[currentSongIndex];
+      const queryText = track.name.replace(/\.mp3$/i, '');
+      // Build a query
+      const query = encodeURIComponent("-site:youtube.com -site:genius.com/albums " + queryText + " \"lyrics\"");
+	  // The ! parameter causes DuckDuckGo to redirect to the first result
+      const url = "https://duckduckgo.com/?q=!+" + query;
+      window.open(url, '_blank');
+    });
+    
+  </script>
+</body>
 </html>
