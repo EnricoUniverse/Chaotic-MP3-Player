@@ -641,8 +641,8 @@
       const queryText = track.name.replace(/\.mp3$/i, '');
       // Build a query
       const query = encodeURIComponent("-site:youtube.com -site:genius.com/albums " + queryText + " \"lyrics\"");
-	  // The ! parameter causes DuckDuckGo to redirect to the first result
-      const url = "https://duckduckgo.com/?q=!+" + query;
+	  // The !ducky parameter causes DuckDuckGo to redirect to the first result
+      const url = "https://duckduckgo.com/?q=!ducky+" + query;
       window.open(url, '_blank');
     });
     
