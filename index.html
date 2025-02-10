@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Chaotic Music Player</title>
+  <title>Chaotic MP3 Player</title>
   <style>
     /* Dark mode styling */
     body {
@@ -80,7 +80,7 @@
 </head>
 <body>
   <h1>
-    Chaotic Music Player 
+    Chaotic MP3 Player 
     <button id="downloadPlayerBtn" style="margin-left:20px;">Download Player</button>
   </h1>
  
@@ -172,7 +172,7 @@
 	  } else {
 		downloadPlayerBtn.addEventListener('click', async () => {
 		  // URL to download the player from
-		  const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-Music-Player/refs/heads/main/index.html';
+		  const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-MP3-Player/refs/heads/main/index.html';
 		  try {
 			const response = await fetch(url);
 			if (!response.ok) {
@@ -186,7 +186,7 @@
 			// Create an invisible download link and trigger a click on it
 			const a = document.createElement('a');
 			a.href = blobUrl;
-			a.download = 'ChaoticMusicPlayer.html';
+			a.download = 'ChaoticMP3Player.html';
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
