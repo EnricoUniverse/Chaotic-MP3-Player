@@ -79,12 +79,14 @@
   </style>
 </head>
 <body>
-  <h1>Chaotic Music Player</h1>
+  <h1>
+    Chaotic Music Player 
+    <button id="downloadPlayerBtn" style="margin-left:20px;">Download Player</button>
+  </h1>
  
     <!-- Display the current song -->
   <div><p id="currentSong" style="display: inline-block"></p>
     <!-- Button to check current song on YouTube -->
-	<button id="explorerBtn" style="display: none; margin-left: 20px;">Find in Explorer</button>
     <button id="youtubeBtn" style="display: none; margin-left: 10px;">Find on YouTube</button>
     <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find Lyrics</button>
   
@@ -154,11 +156,25 @@
     const nextBtn = document.getElementById('nextBtn');
     const currentSongEl = document.getElementById('currentSong');
     const youtubeBtn = document.getElementById('youtubeBtn');
+	const lyricsBtn = document.getElementById('lyricsBtn');
     const playlistUl = document.getElementById('playlist');
     const audioPlayer = document.getElementById('audioPlayer');
     const timeDisplay = document.getElementById('timeDisplay');
     // Drop-down for auto-play mode.
     const autoPlayMode = document.getElementById('autoPlayMode');
+	
+	// Download Player button functionality
+    const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
+    downloadPlayerBtn.addEventListener('click', () => {
+      const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-Music-Player/refs/heads/main/index.html';
+      const a = document.createElement('a');
+      a.href = url;
+      // Set a default file name for the download.
+      a.download = 'ChaoticMusicPlayer.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
     
     // When a folder is selected…
     folderInput.addEventListener('change', (event) => {
@@ -182,7 +198,6 @@
         sortingDiv.style.display = 'inline-block';
         extraControls.style.display = 'flex';
         youtubeBtn.style.display = 'inline-block';
-		explorerBtn.style.display = 'inline-block';
 		lyricsBtn.style.display = 'inline-block';
         
         // Initially sort and render the playlist.
