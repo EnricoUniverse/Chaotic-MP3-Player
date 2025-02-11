@@ -661,52 +661,60 @@
       const url = "https://duckduckgo.com/lite/?q=!+" + query;
       window.open(url, '_blank', 'noopener,noreferrer');
     });
-	
-	// Mobile phone support
-		if ('mediaSession' in navigator) {
-	  // Set up action handlers for media controls
-	  navigator.mediaSession.setActionHandler('play', () => {
-		audioPlayer.play();
-	  });
-	  
-	  navigator.mediaSession.setActionHandler('pause', () => {
-		audioPlayer.pause();
-	  });
-	  
-	  navigator.mediaSession.setActionHandler('previoustrack', () => {
-		// Reuse your existing previous button logic.
-		prevBtn.click();
-	  });
-	  
-	  navigator.mediaSession.setActionHandler('nexttrack', () => {
-		// Reuse your existing next button logic.
-		nextBtn.click();
-	  });
-	  
-	  // Optional: Enable seek backward and forward
-	  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-		const skipTime = details.seekOffset || 10; // Default 10 seconds.
-		audioPlayer.currentTime = Math.max(audioPlayer.currentTime - skipTime, 0);
-	  });
-	  
-	  navigator.mediaSession.setActionHandler('seekforward', (details) => {
-		const skipTime = details.seekOffset || 10;
-		audioPlayer.currentTime = Math.min(audioPlayer.currentTime + skipTime, audioPlayer.duration);
-	  });
-	  
-	  // Update the position state (if supported) so the OS can show current time / duration.
-	audioPlayer.addEventListener('timeupdate', () => {
-	  if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
-		navigator.mediaSession.setPositionState({
-		  duration: audioPlayer.duration || 0,
-		  playbackRate: audioPlayer.playbackRate || 1,
-		  position: audioPlayer.currentTime || 0
-		});
-	  }
-	});
-	}
-	// Mobile phone support
-		
+    
+    // ---------------------------
+    // Mobile phone support using Media Session API.
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        audioPlayer.play();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        audioPlayer.pause();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevBtn.click();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextBtn.click();
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        audioPlayer.currentTime = Math.max(audioPlayer.currentTime - skipTime, 0);
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        audioPlayer.currentTime = Math.min(audioPlayer.currentTime + skipTime, audioPlayer.duration);
+      });
+    }
+    
+    // ===== NEW: Continuously update Media Session position state =====
+    // This ensures that the notification scrubber shows the correct current time.
+    let positionUpdateId = null;
+    function updateMediaSessionPosition() {
+      if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+        navigator.mediaSession.setPositionState({
+          duration: isNaN(audioPlayer.duration) ? 0 : audioPlayer.duration,
+          playbackRate: audioPlayer.playbackRate || 1,
+          position: audioPlayer.currentTime || 0
+        });
+      }
+      positionUpdateId = requestAnimationFrame(updateMediaSessionPosition);
+    }
+    function startPositionUpdater() {
+      if (!positionUpdateId) {
+        updateMediaSessionPosition();
+      }
+    }
+    function stopPositionUpdater() {
+      if (positionUpdateId) {
+        cancelAnimationFrame(positionUpdateId);
+        positionUpdateId = null;
+      }
+    }
+    audioPlayer.addEventListener('play', startPositionUpdater);
+    audioPlayer.addEventListener('pause', stopPositionUpdater);
+    
+    // =====================================================================
   </script>
 </body>
 </html>
