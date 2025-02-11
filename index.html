@@ -695,16 +695,15 @@
 	  });
 	  
 	  // Update the position state (if supported) so the OS can show current time / duration.
-	  audioPlayer.addEventListener('timeupdate', () => {
-		if (navigator.mediaSession.setPositionState) {
-		  navigator.mediaSession.setPositionState({
-			duration: audioPlayer.duration || 0,
-			playbackRate: audioPlayer.playbackRate || 1,
-			position: audioPlayer.currentTime || 0
-		  });
-		}
-	  });
-	}
+	audioPlayer.addEventListener('timeupdate', () => {
+	  if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+		navigator.mediaSession.setPositionState({
+		  duration: audioPlayer.duration || 0,
+		  playbackRate: audioPlayer.playbackRate || 1,
+		  position: audioPlayer.currentTime || 0
+		});
+	  }
+	});
 	// Mobile phone support
 		
   </script>
