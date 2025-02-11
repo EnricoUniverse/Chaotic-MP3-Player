@@ -17,6 +17,11 @@
       border: 1px solid #333;
       padding: 5px;
     }
+    /* When disabled, grey out the slider */
+    input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     /* Updated playlist style: fixed to the bottom */
     #playlist {
       max-height: calc(100vh - 250px); /* leave room for header and controls */
@@ -76,8 +81,8 @@
     #volumeDisplay {
       min-width: 40px;
     }
-	svg {
-    vertical-align: middle;
+    svg {
+      vertical-align: middle;
     }
   </style>
 </head>
@@ -89,7 +94,8 @@
   <div id="subtitle">A better MP3 player. Load a folder filled with MP3s.</div>
  
   <!-- Display the current song -->
-  <div><p id="currentSong" style="display: inline-block"></p>
+  <div>
+    <p id="currentSong" style="display: inline-block"></p>
     <!-- Buttons to check current song on YouTube and lyrics -->
     <button id="youtubeBtn" style="display: none; margin-left: 10px;">Find on YouTube</button>
     <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find Lyrics</button>
@@ -118,7 +124,8 @@
     <input type="range" id="scrubber" min="0" max="0" step="0.1" value="0">
     <span id="timeDisplay">0:00/0:00</span>
     <!-- Volume slider and its label with an SVG speaker icon -->
-    <label for="volumeSlider" style="margin-right: -10px;">
+    <!-- Note: we add an id "volumeIcon" here to attach the mute toggle behavior -->
+    <label for="volumeSlider" id="volumeIcon" style="margin-right: -10px;">
       <svg width="24" height="24" viewBox="0 0 24 24">
         <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
       </svg>
@@ -239,6 +246,61 @@
     const pauseIconSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
       <path fill="currentColor" d="M6 19h4V5H6zm8-14v14h4V5h-4z"/>
     </svg>`;
+
+    // --- Mute Toggle Functionality ---
+    // Variables to track muted state and previous volume.
+    let isMuted = false;
+    let previousVolume = volumeSlider.value; // initially 1
+
+    // Save the normal and muted SVGs.
+    const normalVolumeSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
+      </svg>`;
+    const mutedVolumeSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
+      <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="2"/>
+    </svg>`;
+
+    // Get the volume icon label.
+    const volumeIcon = document.getElementById('volumeIcon');
+
+    // Attach click listener to toggle mute.
+    volumeIcon.addEventListener('click', () => {
+      if (!isMuted) {
+        // Enter muted state:
+        isMuted = true;
+        // Save current volume so we can restore it later.
+        previousVolume = volumeSlider.value;
+        // Set audio volume to 0.
+        audioPlayer.volume = 0;
+        // Update slider and display.
+        volumeSlider.value = 0;
+        volumeDisplay.textContent = "0%";
+        // Change the SVG to the muted version.
+        volumeIcon.innerHTML = mutedVolumeSVG;
+        // Disable the slider (it will appear greyed out).
+        volumeSlider.disabled = true;
+      } else {
+        // Unmute: restore previous volume.
+        isMuted = false;
+        audioPlayer.volume = previousVolume;
+        volumeSlider.value = previousVolume;
+        volumeDisplay.textContent = Math.round(previousVolume * 100) + "%";
+        volumeIcon.innerHTML = normalVolumeSVG;
+        volumeSlider.disabled = false;
+      }
+    });
+
+    // Update the volume slider listener to also update previousVolume when not muted.
+    volumeSlider.addEventListener('input', () => {
+      // Only update the saved volume if we're not muted.
+      if (!isMuted) {
+        previousVolume = volumeSlider.value;
+      }
+      audioPlayer.volume = volumeSlider.value;
+      volumeDisplay.textContent = Math.round(audioPlayer.volume * 100) + "%";
+    });
+    // --- End Mute Toggle ---
 
     // Folder selection event.
     folderInput.addEventListener('change', (event) => {
@@ -519,11 +581,7 @@
       audioPlayer.currentTime = scrubber.value;
     });
     
-    // Volume control and percentage display.
-    volumeSlider.addEventListener('input', () => {
-      audioPlayer.volume = volumeSlider.value;
-      volumeDisplay.textContent = Math.round(audioPlayer.volume * 100) + "%";
-    });
+    // (The volumeSlider listener is already defined above with mute support.)
     
     // Update playback speed when changed.
     playbackSpeed.addEventListener('change', () => {
