@@ -406,6 +406,8 @@
 	  audioPlayer.src = URL.createObjectURL(track.file);
 	  currentSongEl.textContent = "Now playing: " + track.name;
 	  audioPlayer.load();
+	  // Set the playback speed based on the dropdown selection.
+	  audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
 	  audioPlayer.play();
 	  renderPlaylist();
 
