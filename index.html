@@ -17,13 +17,14 @@
       border: 1px solid #333;
       padding: 5px;
     }
+    /* Updated playlist style: fixed to the bottom */
     #playlist {
-      margin-top: 20px;
+      max-height: calc(100vh - 250px); /* leave room for header and controls */
+      overflow-y: auto;
       list-style: none;
       padding: 0;
-      max-height: 450px;
-      overflow-y: auto;
       border: 1px solid #333;
+      background-color: #121212;
     }
     #playlist li {
       padding: 10px;
@@ -48,7 +49,7 @@
     /* Styling for extra controls */
     #extraControls {
       margin-top: 10px;
-	  margin-bottom: 10px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       gap: 15px;
@@ -68,13 +69,15 @@
     #timeDisplay, #volumeDisplay {
       font-size: 0.9em;
       color: #ccc;
-      min-width: 70px;
-      text-align: center;
+      min-width: 77px;
       margin-left: -10px;
     }
-	/* Volume display style */
+    /* Volume display style */
     #volumeDisplay {
       min-width: 40px;
+    }
+	svg {
+    vertical-align: middle;
     }
   </style>
 </head>
@@ -83,40 +86,67 @@
     Chaotic MP3 Player 
     <button id="downloadPlayerBtn" style="vertical-align: middle;">Download Player</button>
   </h1>
-    <div id="subtitle">A better MP3 player. Load a folder filled with MP3s.</div>
+  <div id="subtitle">A better MP3 player. Load a folder filled with MP3s.</div>
  
-    <!-- Display the current song -->
+  <!-- Display the current song -->
   <div><p id="currentSong" style="display: inline-block"></p>
-    <!-- Button to check current song on YouTube -->
+    <!-- Buttons to check current song on YouTube and lyrics -->
     <button id="youtubeBtn" style="display: none; margin-left: 10px;">Find on YouTube</button>
     <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find Lyrics</button>
+  </div>
   
-  <!-- Extra controls: search bar, scrubber, time display, volume slider, volume percentage, and auto-play mode -->
+  <!-- Extra controls: search bar, scrubber, time display, volume slider, auto-play mode, and playback speed -->
   <div id="extraControls" style="display: none;">
-      <button id="prevBtn" style="font-family: monospace; font-variant-emoji: text;">⏮︎</button>
-    <!-- Single toggle button for play/pause -->
-    <button id="togglePlay" style="font-family: monospace; min-width: 25px; font-variant-emoji: text;">⯈︎</button>
-    <button id="nextBtn" style="font-family: monospace; font-variant-emoji: text;">⏭︎</button>
+    <!-- Previous button -->
+    <button id="prevBtn">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M6 6h2v12H6zm3.5 6l8.5 6V6l-8.5 6z"/>
+      </svg>
+    </button>
+    <!-- Toggle play/pause button (starts with play icon) -->
+    <button id="togglePlay" style="min-width: 25px;">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M8 5v14l11-7z"/>
+      </svg>
+    </button>
+    <!-- Next button -->
+    <button id="nextBtn">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M6 18l8.5-6L6 6v12zm9-12v12h2V6h-2z"/>
+      </svg>
+    </button>
     <input type="range" id="scrubber" min="0" max="0" step="0.1" value="0">
-	<span id="timeDisplay">0:00/0:00</span>
-    <label for="volumeSlider" style="font-family: monospace; font-variant-emoji: text; margin-right: -10px;">🔊︎</label>
+    <span id="timeDisplay">0:00/0:00</span>
+    <!-- Volume slider and its label with an SVG speaker icon -->
+    <label for="volumeSlider" style="margin-right: -10px;">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
+      </svg>
+    </label>
     <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     <span id="volumeDisplay">100%</span>
-    <!-- Drop-down for auto-play mode -->
+    <!-- Auto-play mode dropdown -->
     <select id="autoPlayMode">
       <option value="none">No auto-play</option>
       <option value="next" selected>Auto-play next song</option>
       <option value="repeat">Auto-repeat this song</option>
     </select>
+    <!-- Playback speed dropdown -->
+    <select id="playbackSpeed">
+      <option value="0.5">0.5x speed</option>
+      <option value="0.75">0.75x speed</option>
+      <option value="1" selected>1x speed</option>
+      <option value="1.5">1.5x speed</option>
+      <option value="2">2x speed</option>
+    </select>
   </div>
 
- 
-     <!-- Folder selection (Chrome/Edge only) -->
+  <!-- Folder selection (Chrome/Edge only) -->
   <input type="file" style="margin-right: 20px;" id="folderInput" webkitdirectory multiple accept="audio/mp3">
-   <!-- Sorting options (appear once files are loaded) -->
+  <!-- Sorting options (appear once files are loaded) -->
   <div id="sorting" style="margin-top: 10px; display: none;">
     <input type="text" id="searchBar" style="margin-right: 20px;" placeholder="Search...">
-    <select id="sortSelect" style="margin-right: 5px;" >
+    <select id="sortSelect" style="margin-right: 5px;">
       <!-- Default sort is Modified Date -->
       <option value="modified" selected>Sort by modified Date</option>
       <option value="name">Sort by name</option>
@@ -141,7 +171,7 @@
     let currentSongIndex = 0;
     // Mapping from track.id to its list item element
     let liMapping = {};
-    
+
     // Get DOM elements.
     const folderInput = document.getElementById('folderInput');
     const sortingDiv = document.getElementById('sorting');
@@ -157,16 +187,18 @@
     const nextBtn = document.getElementById('nextBtn');
     const currentSongEl = document.getElementById('currentSong');
     const youtubeBtn = document.getElementById('youtubeBtn');
-	const lyricsBtn = document.getElementById('lyricsBtn');
+    const lyricsBtn = document.getElementById('lyricsBtn');
     const playlistUl = document.getElementById('playlist');
     const audioPlayer = document.getElementById('audioPlayer');
     const timeDisplay = document.getElementById('timeDisplay');
-	const subtitle = document.getElementById('subtitle');
+    const subtitle = document.getElementById('subtitle');
     // Drop-down for auto-play mode.
     const autoPlayMode = document.getElementById('autoPlayMode');
-	
-	// Download Player button functionality
-	  const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
+    // Drop-down for playback speed.
+    const playbackSpeed = document.getElementById('playbackSpeed');
+    
+    // Download Player button functionality
+    const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
 
 	  // Hide the button when the page is opened locally
 	  if (window.location.protocol === 'file:') {
@@ -200,7 +232,15 @@
 		});
 	  }
 		
-    // When a folder is selected…
+    // Define SVG icons for play and pause for dynamic updates.
+    const playIconSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M8 5v14l11-7z"/>
+    </svg>`;
+    const pauseIconSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M6 19h4V5H6zm8-14v14h4V5h-4z"/>
+    </svg>`;
+
+    // Folder selection event.
     folderInput.addEventListener('change', (event) => {
       const files = Array.from(event.target.files);
       // Filter for MP3 files and create a track object for each.
@@ -222,8 +262,8 @@
         sortingDiv.style.display = 'inline-block';
         extraControls.style.display = 'flex';
         youtubeBtn.style.display = 'inline-block';
-		lyricsBtn.style.display = 'inline-block';
-		subtitle.style.display = 'none';
+        lyricsBtn.style.display = 'inline-block';
+        subtitle.style.display = 'none';
         
         // Initially sort and render the playlist.
         sortPlaylist();
@@ -444,10 +484,10 @@
       }
     });
     audioPlayer.addEventListener('play', () => {
-      togglePlay.textContent = '⏸︎';
+      togglePlay.innerHTML = pauseIconSVG;
     });
     audioPlayer.addEventListener('pause', () => {
-      togglePlay.textContent = '▶︎';
+      togglePlay.innerHTML = playIconSVG;
     });
     // Modified 'ended' event handler to respect the selected auto-play mode.
     audioPlayer.addEventListener('ended', () => {
@@ -483,8 +523,11 @@
       volumeDisplay.textContent = Math.round(audioPlayer.volume * 100) + "%";
     });
     
-    // ----------------------------
-    // Process an array concurrently with a limit.
+    // Update playback speed when changed.
+    playbackSpeed.addEventListener('change', () => {
+      audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
+    });
+    
     function processConcurrently(array, limit, asyncFn, updateFn) {
       let i = 0;
       let active = 0;
@@ -687,7 +730,7 @@
       });
     }
     
-    // ===== NEW: Continuously update Media Session position state =====
+    // ===== Continuously update Media Session position state =====
     // This ensures that the notification scrubber shows the correct current time.
     let positionUpdateId = null;
     function updateMediaSessionPosition() {
