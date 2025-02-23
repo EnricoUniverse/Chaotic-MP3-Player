@@ -22,7 +22,7 @@
       background-color: #333;
       cursor: pointer;
     }
-	  /* Hover effect for mute button */
+    /* Hover effect for mute button */
     label#volumeIcon:hover {
       cursor: pointer;
     }
@@ -101,7 +101,7 @@
 <body>
   <h1 style="margin-block-end: 2px;">
     Chaotic MP3 Player 
-    <button id="downloadPlayerBtn" style="vertical-align: middle;">Download Player</button>
+    <button id="downloadPlayerBtn" style="vertical-align: middle;">Download player</button>
   </h1>
   <div id="subtitle">A better MP3 player. Load a folder filled with MP3s.</div>
  
@@ -110,7 +110,7 @@
     <p id="currentSong" style="display: inline-block"></p>
     <!-- Buttons to check current song on YouTube and lyrics -->
     <button id="youtubeBtn" style="display: none; margin-left: 10px;">Find on YouTube</button>
-    <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find Lyrics</button>
+    <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find lyrics</button>
   </div>
   
   <!-- Extra controls: search bar, scrubber, time display, volume slider, auto-play mode, and playback speed -->
@@ -216,40 +216,44 @@
     // Drop-down for playback speed.
     const playbackSpeed = document.getElementById('playbackSpeed');
     
-    // Download Player button functionality
+    // Download Player / Online Version button functionality
     const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
-
-	  // Hide the button when the page is opened locally
-	  if (window.location.protocol === 'file:') {
-		downloadPlayerBtn.style.display = 'none';
-	  } else {
-		downloadPlayerBtn.addEventListener('click', async () => {
-		  // URL to download the player from
-		  const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-MP3-Player/refs/heads/main/index.html';
-		  try {
-			const response = await fetch(url);
-			if (!response.ok) {
-			  throw new Error('Network response was not ok');
-			}
-			const content = await response.text();
-			// Create a Blob with the fetched content
-			const blob = new Blob([content], { type: 'text/html' });
-			// Create a blob URL for the download
-			const blobUrl = URL.createObjectURL(blob);
-			// Create an invisible download link and trigger a click on it
-			const a = document.createElement('a');
-			a.href = blobUrl;
-			a.download = 'ChaoticMP3Player.html';
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			// Clean up the blob URL
-			URL.revokeObjectURL(blobUrl);
-		  } catch (error) {
-			alert('Download failed: ' + error.message);
-		  }
-		});
-	  }
+    
+    if (window.location.protocol === 'file:') {
+      // Locally run - show "Online Version" button
+      downloadPlayerBtn.textContent = "Online player";
+      downloadPlayerBtn.addEventListener('click', () => {
+        window.location.href = "https://enricouniverse.github.io/Chaotic-MP3-Player/";
+      });
+    } else {
+      // Online version - provide download functionality
+      downloadPlayerBtn.addEventListener('click', async () => {
+        // URL to download the player from
+        const url = 'https://raw.githubusercontent.com/EnricoUniverse/Chaotic-MP3-Player/refs/heads/main/index.html';
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          const content = await response.text();
+          // Create a Blob with the fetched content
+          const blob = new Blob([content], { type: 'text/html' });
+          // Create a blob URL for the download
+          const blobUrl = URL.createObjectURL(blob);
+          // Create an invisible download link and trigger a click on it
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = 'ChaoticMP3Player.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          // Clean up the blob URL
+          URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+          alert('Download failed: ' + error.message);
+        }
+      });
+    }
 		
     // Define SVG icons for play and pause for dynamic updates.
     const playIconSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
@@ -487,33 +491,33 @@
               </div>`;
     }
     
-	function loadSong(index) {
-	  if (playlist.length === 0) return;
-	  const track = playlist[index];
-	  // Create an object URL for the selected file
-	  audioPlayer.src = URL.createObjectURL(track.file);
-	  currentSongEl.textContent = "Now playing: " + track.name;
-	  audioPlayer.load();
-	  // Set the playback speed based on the dropdown selection.
-	  audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
-	  audioPlayer.play();
-	  renderPlaylist();
+    function loadSong(index) {
+      if (playlist.length === 0) return;
+      const track = playlist[index];
+      // Create an object URL for the selected file
+      audioPlayer.src = URL.createObjectURL(track.file);
+      currentSongEl.innerHTML = "<strong>Now playing:</strong>&nbsp;&nbsp;&nbsp;&nbsp;" + track.name;
+      audioPlayer.load();
+      // Set the playback speed based on the dropdown selection.
+      audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
+      audioPlayer.play();
+      renderPlaylist();
 
-	// Mobile phone support
-	  // Update Media Session metadata if supported
-	  if ('mediaSession' in navigator) {
-		navigator.mediaSession.metadata = new MediaMetadata({
-		  title: track.name,
-		  artist: 'Chaotic MP3 Player',
-		  album: '', // You can update this if you have album info.
-		  // Optionally, add artwork. Replace these URLs with your own images.
-		  artwork: [
-			{ src: 'https://via.placeholder.com/96',   sizes: '96x96',   type: 'image/png' },
-			{ src: 'https://via.placeholder.com/128',  sizes: '128x128', type: 'image/png' }
-		  ]
-		});
-	  }
-	}
+      // Mobile phone support
+      // Update Media Session metadata if supported
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.name,
+          artist: 'Chaotic MP3 Player',
+          album: '', // You can update this if you have album info.
+          // Optionally, add artwork. Replace these URLs with your own images.
+          artwork: [
+            { src: 'https://via.placeholder.com/96',   sizes: '96x96',   type: 'image/png' },
+            { src: 'https://via.placeholder.com/128',  sizes: '128x128', type: 'image/png' }
+          ]
+        });
+      }
+    }
 
     
     // Playback controls that respect the filtered (and sorted) playlist.
@@ -778,15 +782,15 @@
       window.open(url, '_blank');
     });
 	
-	// Lyrics button: Automatically navigate to the lyrics.
-    // This is achieved by performing a DuckDuckGo search
-      lyricsBtn.addEventListener('click', () => {
+    // Lyrics button: Automatically navigate to the lyrics.
+    // This is achieved by performing a DuckDuckGo search.
+    lyricsBtn.addEventListener('click', () => {
       if (playlist.length === 0) return;
       const track = playlist[currentSongIndex];
       const queryText = track.name.replace(/\.mp3$/i, '');
-      // Build a query
+      // Build a query.
       const query = encodeURIComponent("-site:youtube.com -site:genius.com/albums " + queryText + " \"lyrics\"");
-	  // The ! parameter causes DuckDuckGo to redirect to the first result
+      // The ! parameter causes DuckDuckGo to redirect to the first result.
       const url = "https://duckduckgo.com/lite/?q=!+" + query;
       window.open(url, '_blank', 'noopener,noreferrer');
     });
