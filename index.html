@@ -22,7 +22,7 @@
       background-color: #333;
       cursor: pointer;
     }
-	/* Hover effect for mute button */
+	  /* Hover effect for mute button */
     label#volumeIcon:hover {
       cursor: pointer;
     }
@@ -52,9 +52,12 @@
       background-color: #555;
       font-weight: bold;
     }
+    /* Flex container for track info to allow right alignment of metadata */
     .song-info {
-      display: inline-block;
+      display: flex;
+      justify-content: space-between;
       width: 100%;
+      align-items: center;
     }
     .metadata {
       font-size: 0.8em;
@@ -472,13 +475,16 @@
       }
     }
     
-    // Format the track text for display.
+    // Format the track text for display with right-aligned metadata.
     function formatTrackText(track) {
       const durationStr = track.duration ? formatDuration(track.duration) : "Loading";
       const sizeStr = formatFileSize(track.size);
       const modStr = formatDate(track.lastModified);
       const ratingStr = (track.rating !== null) ? track.rating : "Loading";
-      return `${track.name} <span class="metadata">(Duration: ${durationStr}, Size: ${sizeStr}, Modified: ${modStr}, Rating: ${ratingStr})</span>`;
+      return `<div class="song-info">
+                <span class="track-name">${track.name}</span>
+                <span class="metadata">(Duration: ${durationStr}, Size: ${sizeStr}, Modified: ${modStr}, Rating: ${ratingStr})</span>
+              </div>`;
     }
     
 	function loadSong(index) {
