@@ -17,6 +17,11 @@
       border: 1px solid #333;
       padding: 5px;
     }
+    /* Hover effect for inputs, selects, and buttons */
+    input:hover, select:hover, button:hover {
+      background-color: #333;
+      cursor: pointer;
+    }
     /* When disabled, grey out the slider */
     input:disabled {
       opacity: 0.5;
@@ -155,15 +160,15 @@
     <input type="text" id="searchBar" style="margin-right: 20px;" placeholder="Search...">
     <select id="sortSelect" style="margin-right: 5px;">
       <!-- Default sort is Modified Date -->
-      <option value="modified" selected>Sort by modified Date</option>
+      <option value="modified" selected>Sort by modified date</option>
       <option value="name">Sort by name</option>
       <option value="size">Sort by size</option>
       <option value="duration">Sort by duration</option>
       <option value="rating">Sort by rating</option>
       <option value="shuffle">Sort randomly</option>
     </select>
-    <!-- Reverse order is checked by default -->
-    <input type="checkbox" id="inverseOrder" checked>
+    <!-- Reverse order is now NOT checked by default -->
+    <input type="checkbox" id="inverseOrder">
     <label for="inverseOrder">Reverse</label>
   </div>
   <!-- Playlist -->
@@ -392,9 +397,20 @@
             playlist.sort((a, b) => (a.rating || 0) - (b.rating || 0));
             break;
         }
-      }
-      if (inverseOrderCheckbox.checked) {
-        playlist.reverse();
+        // For modified, size, duration & rating sorts, default to descending order.
+        // For name sort, default remains ascending.
+        const defaultDescending = ['modified', 'size', 'duration', 'rating'].includes(sortKey);
+        if (defaultDescending) {
+          // If reverse checkbox is NOT checked, use descending order.
+          if (!inverseOrderCheckbox.checked) {
+            playlist.reverse();
+          }
+        } else {
+          // For non-numeric sorts (e.g., name), reverse only if the checkbox is checked.
+          if (inverseOrderCheckbox.checked) {
+            playlist.reverse();
+          }
+        }
       }
     }
     
