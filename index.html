@@ -75,22 +75,22 @@
     #scrubber {
       width: 170px;
     }
-    #volumeSlider {
+    #volumeSlider, #playbackSpeed {
       width: 100px;
     }
     #searchBar {
       width: 200px;
       padding: 5px;
     }
-    /* Time/volume display style */
-    #timeDisplay, #volumeDisplay {
+    /* Time/volume/speed display style */
+    #timeDisplay, #volumeDisplay, #speedDisplay {
       font-size: 0.9em;
       color: #ccc;
       min-width: 77px;
       margin-left: -10px;
     }
     /* Volume display style */
-    #volumeDisplay {
+    #volumeDisplay, #speedDisplay {
       min-width: 40px;
     }
     svg {
@@ -113,7 +113,7 @@
     <button id="lyricsBtn" style="display: none; margin-left: 10px;">Find lyrics</button>
   </div>
   
-  <!-- Extra controls: search bar, scrubber, time display, volume slider, auto-play mode, and playback speed -->
+  <!-- Extra controls: search bar, scrubber, time display, volume slider, auto-play mode, speed slider with SVG icon, and pitch shift toggle -->
   <div id="extraControls" style="display: none;">
     <!-- Previous button -->
     <button id="prevBtn">
@@ -144,23 +144,19 @@
     </label>
     <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     <span id="volumeDisplay">100%</span>
-    <!-- Auto-play mode dropdown -->
-    <select id="autoPlayMode">
-      <option value="none">No auto-play</option>
-      <option value="next" selected>Auto-play next song</option>
-      <option value="repeat">Auto-repeat this song</option>
-    </select>
-    <!-- Playback speed dropdown -->
-    <select id="playbackSpeed">
-	  <option value="0.25">0.25x speed</option>
-      <option value="0.5">0.5x speed</option>
-      <option value="0.75">0.75x speed</option>
-      <option value="1" selected>1x speed</option>
-	  <option value="1.25">1.25x speed</option>
-      <option value="1.5">1.5x speed</option>
-	  <option value="1.75">1.75x speed</option>
-      <option value="2">2x speed</option>
-    </select>
+    <!-- Speed slider with descriptive SVG icon -->
+      <!-- Custom icon: 3 arrows pointing right, increasing in thickness -->
+	<svg id="speedIcon" width="24" height="24" style="margin-right: -10px;" viewBox="0 0 24 24">
+        <polyline points="4,6 10,12 4,18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+        <polyline points="10,6 16,12 10,18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+        <polyline points="16,6 22,12 16,18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <input type="range" id="playbackSpeed" min="0.25" max="2" step="0.05" value="1">
+      <span id="speedDisplay" style="margin-right: -10px;">1x</span>
+    <!-- Pitch shift checkbox: when checked, pitch follows speed changes (i.e. pitch is shifted).
+         When unchecked (default), pitch is preserved. -->
+    <input type="checkbox" id="pitchShiftCheckbox">
+	<label for="pitchShiftCheckbox" style="margin-left: -10px;">Pitch shift</label>
   </div>
 
   <!-- Folder selection (Chrome/Edge only) -->
@@ -168,6 +164,12 @@
   <!-- Sorting options (appear once files are loaded) -->
   <div id="sorting" style="margin-top: 10px; display: none;">
     <input type="text" id="searchBar" style="margin-right: 20px;" placeholder="Search...">
+	    <!-- Auto-play mode dropdown -->
+    <select id="autoPlayMode" style="margin-right: 20px;">
+      <option value="none">No auto-play</option>
+      <option value="next" selected>Auto-play next song</option>
+      <option value="repeat">Auto-repeat this song</option>
+    </select>
     <select id="sortSelect" style="margin-right: 5px;">
       <!-- Default sort is Modified Date -->
       <option value="modified" selected>Sort by modified date</option>
@@ -214,11 +216,41 @@
     const audioPlayer = document.getElementById('audioPlayer');
     const timeDisplay = document.getElementById('timeDisplay');
     const subtitle = document.getElementById('subtitle');
-    // Drop-down for auto-play mode.
+    // Auto-play mode dropdown.
     const autoPlayMode = document.getElementById('autoPlayMode');
-    // Drop-down for playback speed.
+    // Speed slider and display.
     const playbackSpeed = document.getElementById('playbackSpeed');
+    const speedDisplay = document.getElementById('speedDisplay');
+    // Pitch shift checkbox.
+    const pitchShiftCheckbox = document.getElementById('pitchShiftCheckbox');
     
+    // Set initial pitch preservation. (Default is unchecked -> preserve pitch.)
+    audioPlayer.preservesPitch = true;
+    audioPlayer.mozPreservesPitch = true;
+    audioPlayer.webkitPreservesPitch = true;
+    
+    // Function to update playback rate, update speed display, and adjust pitch preservation.
+    function updatePlaybackRate() {
+      const speed = parseFloat(playbackSpeed.value);
+      audioPlayer.playbackRate = speed;
+      speedDisplay.textContent = speed.toFixed(2) + "x";
+      // If the checkbox is checked, do not preserve pitch (i.e. pitch will shift with speed).
+      if (pitchShiftCheckbox.checked) {
+        audioPlayer.preservesPitch = false;
+        audioPlayer.mozPreservesPitch = false;
+        audioPlayer.webkitPreservesPitch = false;
+      } else {
+        audioPlayer.preservesPitch = true;
+        audioPlayer.mozPreservesPitch = true;
+        audioPlayer.webkitPreservesPitch = true;
+      }
+      console.log("Updated playbackRate to", audioPlayer.playbackRate, "with preservesPitch", audioPlayer.preservesPitch);
+    }
+    
+    // Listen for changes in the speed slider and pitch shift checkbox.
+    playbackSpeed.addEventListener('input', updatePlaybackRate);
+    pitchShiftCheckbox.addEventListener('change', updatePlaybackRate);
+		
     // Download Player / Online Version button functionality
     const downloadPlayerBtn = document.getElementById('downloadPlayerBtn');
     
@@ -321,7 +353,6 @@
     });
     // --- End Mute Toggle ---
 
-    // Folder selection event.
     folderInput.addEventListener('change', (event) => {
       const files = Array.from(event.target.files);
       // Filter for MP3 files and create a track object for each.
@@ -501,8 +532,7 @@
       audioPlayer.src = URL.createObjectURL(track.file);
       currentSongEl.innerHTML = "<strong>Now playing:</strong>&nbsp;&nbsp;&nbsp;&nbsp;" + track.name;
       audioPlayer.load();
-      // Set the playback speed based on the dropdown selection.
-      audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
+      updatePlaybackRate();
       audioPlayer.play();
       renderPlaylist();
 
@@ -522,7 +552,6 @@
       }
     }
 
-    
     // Playback controls that respect the filtered (and sorted) playlist.
     prevBtn.addEventListener('click', () => {
       // Compute the visible tracks based on the search filter.
@@ -612,13 +641,6 @@
     });
     scrubber.addEventListener('input', () => {
       audioPlayer.currentTime = scrubber.value;
-    });
-    
-    // (The volumeSlider listener is already defined above with mute support.)
-    
-    // Update playback speed when changed.
-    playbackSpeed.addEventListener('change', () => {
-      audioPlayer.playbackRate = parseFloat(playbackSpeed.value);
     });
     
     function processConcurrently(array, limit, asyncFn, updateFn) {
