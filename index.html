@@ -8188,9 +8188,7 @@
     "building",
     "bureau",
     "work",
-    "city",
-    "high",
-    "rise"
+    "city"
   ],
   "🏣": [
     "japanese_post_office",
@@ -8270,8 +8268,6 @@
     "teach",
     "clock",
     "elementary",
-    "high",
-    "middle",
     "tower"
   ],
   "🏬": [
@@ -8594,7 +8590,6 @@
     "travel",
     "bullettrain",
     "front",
-    "high",
     "nose",
     "railway",
     "shinkansen"
@@ -11145,7 +11140,6 @@
     "clothing",
     "cowgirl",
     "heeled",
-    "high",
     "knee",
     "shoe",
     "womans",
@@ -16669,7 +16663,7 @@
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    // Helper function: returns up to 5 emoji whose keywords appear as standalone words in the title.
+    // Helper function: returns up to 10 emoji whose keywords appear as standalone words in the title.
     function getEmojisForTitle(title) {
       const found = [];
       // We'll match standalone words by ensuring the keyword is preceded by start-of-string or whitespace and followed by end-of-string or whitespace.
@@ -16682,7 +16676,7 @@
             break; // Only one match per emoji.
           }
         }
-        if (found.length >= 5) break;
+        if (found.length >= 10) break;
       }
       return found;
     }
