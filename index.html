@@ -778,8 +778,15 @@
         // Repeat the current song.
         loadSong(currentSongIndex);
       } else if (mode === "next") {
-        // Auto-play the next song.
-        currentSongIndex = (currentSongIndex + 1) % playlist.length;
+        const searchTerm = searchBar.value.toLowerCase();
+        const visibleTracks = playlist.filter(track => track.name.toLowerCase().includes(searchTerm));
+        if (visibleTracks.length === 0) return;
+        const currentTrack = playlist[currentSongIndex];
+        let visibleIndex = visibleTracks.findIndex(track => track.id === currentTrack.id);
+        if (visibleIndex === -1) visibleIndex = 0;
+        visibleIndex = (visibleIndex + 1) % visibleTracks.length;
+        const nextTrack = visibleTracks[visibleIndex];
+        currentSongIndex = playlist.findIndex(track => track.id === nextTrack.id);
         loadSong(currentSongIndex);
       }
     });
@@ -797,25 +804,16 @@
     });
     
     function processConcurrently(array, limit, asyncFn, updateFn) {
-      let i = 0;
-      let active = 0;
+      let i = 0, active = 0;
       return new Promise(resolve => {
         function next() {
-          if (i >= array.length && active === 0) {
-            resolve();
-            return;
-          }
+          if (i >= array.length && active === 0) { resolve(); return; }
           while (active < limit && i < array.length) {
             const item = array[i++];
             active++;
             asyncFn(item)
-              .then(result => {
-                updateFn(item, result);
-              })
-              .finally(() => {
-                active--;
-                next();
-              });
+              .then(result => { updateFn(item, result); })
+              .finally(() => { active--; next(); });
           }
         }
         next();
