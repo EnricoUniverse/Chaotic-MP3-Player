@@ -194,6 +194,161 @@
   <audio id="audioPlayer"></audio>
   
   <script>
+    // Clean title function with filter strings that are not applied if removal would result in an empty title.
+    function cleanTitle(fileName) {
+      // Remove the .mp3 extension and trim whitespace.
+      let original = fileName.replace(/\.mp3$/i, '').trim();
+      let title = original;
+      // Array of substrings to filter out (modify as needed)
+      const FILTER_STRINGS = [
+		"[Official music video HD]",
+		"[Official music video HQ]",
+		"(Official music video HD)",
+		"(Official music video HQ)",
+		"(Official HD Video)",
+		"[Official HD Video]",
+		"(Official HQ Video)",
+		"[Official HQ Video]",
+		"(Official HD Audio)",
+		"[Official HD Audio]",
+		"(Official HQ Audio)",
+		"[Official HQ Audio]",
+	    "(Official Music Video)",
+		"[Official Music Video]",
+		"(Official Lyric Video)",
+		"[Official Lyric Video]",
+		"(Official Lyrics Video)",
+		"[Official Lyrics Video]",
+		"Official Lyric Video",
+		"Official Music Video",
+		"Official Lyrics Video",
+		"[Official Audio]",
+		"[Ultra Music]",
+		"(Exclusive on Youtube)",
+		"(Animated Video)",
+        "(Official Video)",
+		"(Officiële Video)",
+		"De Officiële Lyric Muziekvideo",
+		"De Officiële Muziekvideo",
+		"(Officiële Videoclip)",
+		"(Officiële Lyricvideo)",
+		"[Official Video]",
+		"[Video Official]",
+		"(Video Official)",
+		"(Video Oficial)",
+		"(Dance Video)",
+		"[Video Games Music]",
+		"(Official Visualizer)",
+		"(Official Visualiser)",
+		"[Official Visualizer]",
+		"[Official Visualiser]",
+		"(Official Visual)",
+		"[Official Visual]",
+		"(Visualizer)",
+		"(Visualiser)",
+		"(New Release)",
+		"NCS - Copyright Free Music",
+		"NCS Copyright Free Music",
+		"[NCS Release]",
+		"[Monstercat Release]",
+		"(Proximity Release)",
+		"(Color Coded Lyrics)",
+		"(Lyric Video)",
+		"(Lyrics Video)",
+		"[Lyric Video]",
+		"Lyric Video",
+		"(w lyrics)",
+		"[Lyrics Video]",
+		"Free Release",
+		"(Vignette Video)",
+		"[Lyrics]",
+        "(Lyrics)",
+        "(Official Audio)",
+        "(HD Video)",
+		"(With Lyrics)",
+		"With Lyrics",
+		"- Lyrics",
+		"Lyrics",
+		"Official Video",
+		"(Official Album Audio)",
+		"[Official Album Audio]",
+		"Official Album Audio",
+		"Official Album",
+		"YouTube",
+		"Official Audio",
+		"(Music Video)",
+		"[Music Video]",
+		"official-music-video",
+		"music-video",
+		"Music Video",
+		"[FREE HQ DOWNLOAD]",
+		"(FREE HQ DOWNLOAD)",
+		"FREE HQ DOWNLOAD",
+		"[FREE HD DOWNLOAD]",
+		"(FREE HD DOWNLOAD)",
+		"FREE HD DOWNLOAD",
+		"[FREE DOWNLOAD]",
+		"(FREE DOWNLOAD)",
+		"FREE DOWNLOAD",
+		"[FREE DL]",
+		"(FREE DL)",
+		"FREE DL",
+		"Original Song and Animation",
+		"FREE DOWNLOAD",
+		"DOWNLOAD link",
+		"Official Soundtrack",
+		"Netflix",
+		"Tiktok",
+		"Fan Video",
+		"Official_Video",
+		"Official Visualizer",
+		"Official Visualiser",
+		"Official Visual",
+		"Soundtrack",
+		"(128 kbps)",
+		"(128  kbps)",
+		"(Audio)",
+		"(Subtitles)",
+		"(Full version)",
+		"[Full song]",
+		"(Full song)",
+		"Full song",
+		"(Copyright Free Music)",
+		"[No Copyright]",
+		"No Copyright Music",
+		"[Audio]",
+		"(savemp3.net)",
+		"[ ezmp3.cc ]",
+		"128kbps",
+		"[HQ Audio]",
+		"[HD Audio]",
+		"(HQ Audio)",
+		"(HD Audio)",
+		"[HQ]",
+		"[HD]",
+		"(HQ)",
+		"(HD)",
+		"HQ",
+		"HD",
+		"()",
+		"[]",
+		"[ ]",
+		"( )"
+      ];
+      // Remove each filtered string (case-insensitive)
+      FILTER_STRINGS.forEach(filter => {
+        // Escape special regex characters
+        const escaped = filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Test what title would be after removal
+        const newTitle = title.replace(new RegExp("\\s*" + escaped, "i"), "").trim();
+        // Only apply the removal if the new title is not empty.
+        if(newTitle !== "") {
+          title = newTitle;
+        }
+      });
+      return title;
+    }
+    
     // Global variables
     let playlist = []; // Array of track objects
     let currentSongIndex = 0;
@@ -220,12 +375,9 @@
     const audioPlayer = document.getElementById('audioPlayer');
     const timeDisplay = document.getElementById('timeDisplay');
     const subtitle = document.getElementById('subtitle');
-    // Auto-play mode dropdown.
     const autoPlayMode = document.getElementById('autoPlayMode');
-    // Speed slider and display.
     const playbackSpeed = document.getElementById('playbackSpeed');
     const speedDisplay = document.getElementById('speedDisplay');
-    // Pitch shift checkbox.
     const pitchShiftCheckbox = document.getElementById('pitchShiftCheckbox');
     
     // Set initial pitch preservation. (Default is unchecked -> preserve pitch.)
@@ -309,8 +461,8 @@
 
     // Save the normal and muted SVGs.
     const normalVolumeSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
-        <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
-      </svg>`;
+      <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
+    </svg>`;
     const mutedVolumeSVG = `<svg width="24" height="24" viewBox="0 0 24 24">
       <path fill="currentColor" d="M3 10v4h4l5 5V5l-5 5H3z"/>
       <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="2"/>
@@ -365,8 +517,8 @@
                       .map((file, index) => ({
                         id: index,
                         file: file,
-                        // Remove ".mp3" suffix from display name:
-                        name: file.name.replace(/\.mp3$/i, ''),
+                        // Use cleanTitle() to filter out unwanted suffixes.
+                        name: cleanTitle(file.name),
                         size: file.size,
                         lastModified: file.lastModified,
                         duration: null, // To be loaded asynchronously.
@@ -406,7 +558,7 @@
       sortPlaylist();
       if (typeof currentId !== 'undefined') {
         currentSongIndex = playlist.findIndex(t => t.id === currentId);
-        if (currentSongIndex < 0) { currentSongIndex = 0; }
+        if (currentSongIndex < 0) currentSongIndex = 0;
       }
       renderPlaylist();
     });
@@ -415,7 +567,7 @@
       sortPlaylist();
       if (typeof currentId !== 'undefined') {
         currentSongIndex = playlist.findIndex(t => t.id === currentId);
-        if (currentSongIndex < 0) { currentSongIndex = 0; }
+        if (currentSongIndex < 0) currentSongIndex = 0;
       }
       renderPlaylist();
     });
@@ -607,11 +759,8 @@
     });
     
     togglePlay.addEventListener('click', () => {
-      if (audioPlayer.paused) {
-        audioPlayer.play();
-      } else {
-        audioPlayer.pause();
-      }
+      if (audioPlayer.paused) audioPlayer.play();
+      else audioPlayer.pause();
     });
     audioPlayer.addEventListener('play', () => {
       togglePlay.innerHTML = pauseIconSVG;
@@ -679,12 +828,8 @@
         const tempAudio = new Audio();
         tempAudio.preload = 'metadata';
         tempAudio.src = URL.createObjectURL(file);
-        tempAudio.addEventListener('loadedmetadata', () => {
-          resolve(tempAudio.duration);
-        });
-        tempAudio.addEventListener('error', () => {
-          resolve(0);
-        });
+        tempAudio.addEventListener('loadedmetadata', () => { resolve(tempAudio.duration); });
+        tempAudio.addEventListener('error', () => { resolve(0); });
       });
     }
     
@@ -803,7 +948,7 @@
     youtubeBtn.addEventListener('click', () => {
       if (playlist.length === 0) return;
       const track = playlist[currentSongIndex];
-      const queryText = track.name.replace(/\.mp3$/i, '');
+      const queryText = track.name;
       // Build a query that restricts results to YouTube.
       const query = encodeURIComponent("site:youtube.com " + queryText);
       // The btnI parameter causes Google to redirect to the first result.
@@ -816,7 +961,7 @@
     lyricsBtn.addEventListener('click', () => {
       if (playlist.length === 0) return;
       const track = playlist[currentSongIndex];
-      const queryText = track.name.replace(/\.mp3$/i, '');
+      const queryText = track.name;
       // Build a query.
       const query = encodeURIComponent("-site:youtube.com -site:genius.com/albums " + queryText + " \"lyrics\"");
       // The ! parameter causes DuckDuckGo to redirect to the first result.
@@ -827,19 +972,11 @@
     // ---------------------------
     // Mobile phone support using Media Session API.
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => {
-        audioPlayer.play();
-      });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        audioPlayer.pause();
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        prevBtn.click();
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        nextBtn.click();
-      });
-      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      navigator.mediaSession.setActionHandler('play', () => { audioPlayer.play(); });
+      navigator.mediaSession.setActionHandler('pause', () => { audioPlayer.pause(); });
+      navigator.mediaSession.setActionHandler('previoustrack', () => { prevBtn.click(); });
+      navigator.mediaSession.setActionHandler('nexttrack', () => { nextBtn.click(); });
+      navigator.mediaSession.setActionHandler('seekbackward', details => {
         const skipTime = details.seekOffset || 10;
         audioPlayer.currentTime = Math.max(audioPlayer.currentTime - skipTime, 0);
       });
@@ -863,9 +1000,7 @@
       positionUpdateId = requestAnimationFrame(updateMediaSessionPosition);
     }
     function startPositionUpdater() {
-      if (!positionUpdateId) {
-        updateMediaSessionPosition();
-      }
+      if (!positionUpdateId) updateMediaSessionPosition();
     }
     function stopPositionUpdater() {
       if (positionUpdateId) {
