@@ -16849,91 +16849,109 @@
       });
     }
     
-    // Retrieve rating
-	function getRating(file) {
-	  return new Promise((resolve) => {
-		const reader = new FileReader();
-		reader.onload = function(e) {
-		  const buffer = e.target.result;
-		  const view = new DataView(buffer);
-
-		  // Check for an ID3 header ("ID3" in the first three bytes)
-		  if (
-			view.getUint8(0) !== 0x49 || // 'I'
-			view.getUint8(1) !== 0x44 || // 'D'
-			view.getUint8(2) !== 0x33    // '3'
-		  ) {
-			resolve(0);
-			return;
-		  }
-
-		  // Read the synchsafe integer that tells us the tag size.
-		  const tagSize = ((view.getUint8(6) & 0x7F) << 21) |
-						  ((view.getUint8(7) & 0x7F) << 14) |
-						  ((view.getUint8(8) & 0x7F) << 7)  |
-						  (view.getUint8(9) & 0x7F);
-		  
-		  // The header is 10 bytes long.
-		  let pointer = 10;
-		  const end = pointer + tagSize;
-		  let rating = 0;
-
-		  while (pointer < end) {
-			// Read 4-byte frame ID.
-			let frameId = "";
-			for (let i = 0; i < 4; i++) {
-			  frameId += String.fromCharCode(view.getUint8(pointer + i));
-			}
-			pointer += 4;
-
-			// If the frame ID is empty, break out.
-			if (!frameId.trim()) break;
-
-			// Read the 4-byte frame size (big-endian; in ID3v2.3 it’s a normal integer)
-			const frameSize = view.getUint32(pointer, false);
-			pointer += 4;
-
-			// Skip the 2-byte flags.
-			pointer += 2;
-
-			if (frameId === "POPM") {
-			  // POPM frame structure:
-			  //   - A null-terminated email string.
-			  //   - A 1-byte rating.
-			  //   - A play count (variable length, not needed here).
-			  let email = "";
-			  while (pointer < end) {
-				const byte = view.getUint8(pointer);
-				pointer++;
-				if (byte === 0) break; // null terminator
-				email += String.fromCharCode(byte);
-			  }
-			  // The next byte is the rating.
-			  if (pointer < end) {
-				rating = view.getUint8(pointer);
-				// Normalize a 0–255 rating to a 0–5 scale.
-				if (rating > 5) {
-				  rating = Math.ceil(rating / 51);
-				}
-			  }
-			  resolve(rating);
-			  return;
-			} else {
-			  // Skip this frame’s content if it's not POPM.
-			  pointer += frameSize;
-			}
-		  }
-		  // If no POPM frame was found, resolve to 0.
-		  resolve(0);
-		};
-
-		reader.onerror = function() {
-		  resolve(0);
-		};
-
-		reader.readAsArrayBuffer(file);
-	  });
-	}
+    // Retrieve rating (works with both ID3v2.3 and ID3v2.4)
+    function getRating(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const buffer = e.target.result;
+          const view = new DataView(buffer);
+  
+          // Check for an ID3 header ("ID3" in the first three bytes)
+          if (
+            view.getUint8(0) !== 0x49 || // 'I'
+            view.getUint8(1) !== 0x44 || // 'D'
+            view.getUint8(2) !== 0x33 // '3'
+          ) {
+            resolve(0);
+            return;
+          }
+  
+          // Get the ID3 version (v2.3 or v2.4)
+          const id3MajorVersion = view.getUint8(3); // Byte 3 contains the major version number
+          const isV24 = id3MajorVersion === 4;
+  
+          // Read the synchsafe integer that tells us the tag size.
+          const tagSize =
+            ((view.getUint8(6) & 0x7F) << 21) |
+            ((view.getUint8(7) & 0x7F) << 14) |
+            ((view.getUint8(8) & 0x7F) << 7) |
+            (view.getUint8(9) & 0x7F);
+  
+          // The header is 10 bytes long.
+          let pointer = 10;
+          const end = pointer + tagSize;
+          let rating = 0;
+  
+          while (pointer < end) {
+            // Read 4-byte frame ID (v2.3) or potentially 4-byte for v2.4
+            let frameId = "";
+            for (let i = 0; i < 4; i++) {
+              frameId += String.fromCharCode(view.getUint8(pointer + i));
+            }
+            pointer += 4;
+  
+            // If the frame ID is empty, break out.
+            if (!frameId.trim()) break;
+            
+            // Read the frame size (v2.3 or v2.4)
+            let frameSize;
+            if (isV24) {
+              // In ID3v2.4, the frame size is a synchsafe integer
+              frameSize =
+                  ((view.getUint8(pointer) & 0x7F) << 21) |
+                  ((view.getUint8(pointer + 1) & 0x7F) << 14) |
+                  ((view.getUint8(pointer + 2) & 0x7F) << 7) |
+                  (view.getUint8(pointer + 3) & 0x7F);
+              pointer += 4;
+            } else {
+              // In ID3v2.3, it's a normal 4-byte integer (big-endian)
+              frameSize = view.getUint32(pointer, false);
+              pointer += 4;
+            }
+  
+            // Skip the 2-byte flags.
+            pointer += 2;
+  
+            if (frameId === "POPM") {
+              // POPM frame structure:
+              //   - A null-terminated email string.
+              //   - A 1-byte rating.
+              //   - A play count (variable length, not needed here).
+              let email = "";
+              while (pointer < end) {
+                const byte = view.getUint8(pointer);
+                pointer++;
+                if (byte === 0) break; // null terminator
+                email += String.fromCharCode(byte);
+              }
+              // The next byte is the rating.
+              if (pointer < end) {
+                rating = view.getUint8(pointer);
+                // Normalize a 0–255 rating to a 0–5 scale.
+                if (rating > 5) {
+                  rating = Math.ceil(rating / 51);
+                }
+              }
+              resolve(rating);
+              return;
+            } else {
+              // Skip this frame’s content if it's not POPM.
+              pointer += frameSize;
+            }
+          }
+          // If no POPM frame was found, resolve to 0.
+          resolve(0);
+        };
+  
+        reader.onerror = function () {
+          resolve(0);
+        };
+  
+        reader.readAsArrayBuffer(file);
+      });
+    }
+  
 
 
     
