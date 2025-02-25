@@ -65,6 +65,8 @@
       padding: 10px;
       cursor: pointer;
       border-bottom: 1px solid #333;
+      /* Ensure the content doesn't wrap awkwardly */
+      min-width: 0;
     }
     #playlist li:hover {
       background-color: #333;
@@ -75,14 +77,21 @@
     }
     /* Flex container for track info to allow right alignment of metadata */
     .song-info {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 4fr 0.35fr 0.35fr 0.7fr 0.4fr;
+      gap: 10px;
       width: 100%;
       align-items: center;
     }
     .metadata {
       font-size: 0.8em;
       color: #aaa;
+    }
+    .metadata-cell {
+      font-size: 0.8em;
+      color: #aaa;
+      text-align: right;
+      white-space: nowrap;
     }
     /* Styling for extra controls */
     #extraControls {
@@ -138,6 +147,33 @@
       font-size: 24px;
       opacity: 1;
       /* animationName is set inline in JS */
+    }
+    .track-name {
+      /* Allow long track names to be truncated with ellipsis */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-right: 15px;
+    }
+    
+    .star-rating {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    }
+
+    .star {
+      width: 12px;
+      height: 12px;
+      margin: 0 1px;
+    }
+
+    .star path {
+      fill: #666;  /* Color for hollow stars */
+    }
+
+    .star.filled path {
+      fill: #ffd700;  /* Color for filled stars */
     }
   </style>
 </head>
@@ -16695,11 +16731,27 @@
       const durationStr = track.duration ? formatDuration(track.duration) : "Loading";
       const sizeStr = formatFileSize(track.size);
       const modStr = formatDate(track.lastModified);
-      const ratingStr = (track.rating !== null) ? track.rating : "Loading";
+      const ratingStars = generateStarRating(track.rating);
       return `<div class="song-info">
                 <span class="track-name">${track.name}</span>
-                <span class="metadata">(Duration: ${durationStr}, Size: ${sizeStr}, Modified: ${modStr}, Rating: ${ratingStr})</span>
+                <span class="metadata-cell">${durationStr}</span>
+                <span class="metadata-cell">${sizeStr}</span>
+                <span class="metadata-cell">${modStr}</span>
+                <span class="metadata-cell star-rating">${ratingStars}</span>
               </div>`;
+    }
+
+    // Add this new function to generate the star rating SVGs
+    function generateStarRating(rating) {
+      if (rating === null) return "Loading";
+      
+      let stars = '';
+      for (let i = 1; i <= 5; i++) {
+        stars += `<svg class="star ${i <= rating ? 'filled' : ''}" viewBox="0 0 24 24">
+          <path d="M12 2l2.4 7.4h7.6l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4-6.2-4.5h7.6z"/>
+        </svg>`;
+      }
+      return stars;
     }
     
     function loadSong(index) {
