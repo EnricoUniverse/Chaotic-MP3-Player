@@ -269,6 +269,8 @@
     <!-- Reverse order is now NOT checked by default -->
     <input type="checkbox" id="inverseOrder">
     <label for="inverseOrder">Reverse</label>
+	<!-- Copy button -->
+	<button id="copyListBtn" style="margin-left: 20px;">Copy List</button>
 	</div>
   </div>
   <!-- Playlist -->
@@ -16586,6 +16588,40 @@
     });
     searchBar.addEventListener('input', () => {
       renderPlaylist();
+    });
+	
+	    // Copy List Functionality
+    const copyListBtn = document.getElementById('copyListBtn');
+    copyListBtn.addEventListener('click', () => {
+      // 1. Get current search filter
+      const searchTerm = searchBar.value.toLowerCase();
+      
+      // 2. Filter the playlist exactly like the UI does (matching the display name)
+      const visibleTracks = playlist.filter(track => 
+        track.name.toLowerCase().includes(searchTerm)
+      );
+
+      if (visibleTracks.length === 0) {
+        alert("No tracks to copy!");
+        return;
+      }
+
+      // 3. Map to raw filenames (track.file.name) removing only the extension
+      const textToCopy = visibleTracks
+        .map(t => t.file.name.replace(/\.mp3$/i, ''))
+        .join('\n');
+
+      // 4. Write to clipboard
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = copyListBtn.textContent;
+        copyListBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyListBtn.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert("Failed to copy list to clipboard.");
+      });
     });
     
     // Sort the playlist array based on the selected criteria.
